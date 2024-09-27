@@ -4,6 +4,7 @@ from aiogram.utils.markdown import text, bold, link
 import emoji
 
 from database import Database
+from config import ADMIN_ID
 
 # общие кнопки 
 back_menu_btn = InlineKeyboardButton(emoji.emojize(':arrow_left: Выйти в меню :arrow_left:', language='alias'), callback_data='btn_backmenu')
@@ -56,7 +57,7 @@ def inline_kb_game(user_id, game_id: int):
 			inline_kb_game.add(previous, next)
 				
 
-	players_btn = InlineKeyboardButton(emoji.emojize(f':bust_in_silhouette: Игроки ({db.get_numplayers(game_id)}/19)', language='alias'), callback_data = 'btn_players_' + str(game_id))
+	players_btn = InlineKeyboardButton(emoji.emojize(f':bust_in_silhouette: Игроки: {db.get_numplayers(game_id)}', language='alias'), callback_data = 'btn_players_' + str(game_id))
 	inline_kb_game.row(players_btn)
 	# проверяем записан ли уже на игру
 	if (db.registration_exists(user_id, game_id)):
@@ -105,6 +106,40 @@ def players_text(game_id):
 				text += f'{str(counter)}. ' + link(player[3], f'https://t.me/{player[2]}') + f' + {player[5] - 1} \n'
 				counter += 1
 	return text
+
+#клавиатура меню игрока
+def players_keyboard(user_id, game_id):
+	inline_kb_profile = InlineKeyboardMarkup(row_width=1)
+	text_and_data = [
+		[emoji.emojize(':arrow_left: Назад :arrow_left:', language='alias'), 'btn_game_' + str(game_id)],
+	]
+	if user_id in ADMIN_ID:
+		text_and_data.insert(0, ['Удалить игрока', f'btn_deleteplayer_{game_id}'],)
+	row_btns = (InlineKeyboardButton(text, callback_data=data) for text, data in text_and_data)
+	inline_kb_profile.add(*row_btns)
+	return inline_kb_profile
+
+
+def delete_players_keyboard(game_id):
+	players = Database('database.db').get_registration(game_id)
+	inline_kb = InlineKeyboardMarkup(row_width=1)
+	if len(players) < 1:
+		text = 'Больше некого удалить'
+	else:
+		text = 'Выберите кого вы хотите удалить из данной игры'
+		text_and_data = []
+		for player in players:
+			print(player)
+			if player[5] == 1:
+				text_and_data.append([f'{player[3]} (@{player[2]})', f'btn_deleteplayer_{game_id}_{player[1]}'])
+			else:
+				text_and_data.append([f'{player[3]} (@{player[2]}) +{player[5] - 1}', f'btn_deleteplayer_{game_id}_{player[1]}'])
+	
+		row_btns = (InlineKeyboardButton(text, callback_data=data) for text, data in text_and_data)
+		inline_kb.add(*row_btns)
+	inline_kb.add(InlineKeyboardButton(emoji.emojize(':arrow_left: Назад :arrow_left:', language='alias'), callback_data='btn_game_' + str(game_id)))
+
+	return text, inline_kb
 
 # профиль игрока
 def inline_kb_profile(user_id):

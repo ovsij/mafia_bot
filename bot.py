@@ -54,6 +54,7 @@ async def cmd_work(message: types.Message):
 # меню
 @dp.message_handler(commands=['menu'])
 async def cmd_menu(message: types.Message):
+    print(kb.inline_kb_menu(message.from_user.id))
     await bot.send_message(message.from_user.id,
 				text=kb.text_menu,
 				reply_markup=kb.inline_kb_menu(message.from_user.id),
@@ -123,9 +124,30 @@ async def process_callback_button(callback_query: types.CallbackQuery):
 async def process_callback_button(callback_query: types.CallbackQuery):
     code = callback_query.data
     text = kb.players_text(int(code.split('_')[-1]))
+    reply_markup = kb.players_keyboard(int(callback_query.from_user.id), int(code.split('_')[-1]))
     await callback_query.message.edit_caption(
             caption=text, 
-            reply_markup=kb.back_game_btn(int(code.split('_')[-1])), 
+            reply_markup=reply_markup, 
+            parse_mode=ParseMode.MARKDOWN
+            )
+    
+# удаление игроков
+@dp.callback_query_handler(lambda c: c.data.split('_')[1] == 'deleteplayer')
+async def process_callback_button(callback_query: types.CallbackQuery):
+    code = callback_query.data
+    print(code)
+    game_id = int(code.split('_')[-1])
+    if len(code.split('_')) > 3:
+        game_id = int(code.split('_')[-2])
+        Database('database.db').del_registration(
+            user_id=int(code.split('_')[-1]), 
+            game_id=game_id
+        )
+        
+    text, reply_markup = kb.delete_players_keyboard(game_id)
+    await callback_query.message.edit_caption(
+            caption=text, 
+            reply_markup=reply_markup, 
             parse_mode=ParseMode.MARKDOWN
             )
     
@@ -184,6 +206,7 @@ async def process_callback_button(callback_query: types.CallbackQuery):
 # профиль
 @dp.callback_query_handler(lambda c: c.data == 'btn_profile')
 async def process_callback_button(callback_query: types.CallbackQuery):
+    print(callback_query)
     code = callback_query.data
     text, reply_markup = kb.inline_kb_profile(callback_query.from_user.id)
     await callback_query.message.edit_text(
